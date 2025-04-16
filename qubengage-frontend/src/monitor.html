@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+            margin: 0;
+        }
+        #dashboard {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Monitor Dashboard</h1>
+    <div id="dashboard">
+        <p id="status">Service status will be displayed here.</p>
+        <button id="checkStatusBtn">Check All Services Status</button>
+        <button id="checkMaxminBtn">Check Maxmin</button>
+        <button id="checkSortBtn">Check Sort</button>
+        <button id="checkTotalBtn">Check Total</button>
+        <button id="checkScoreBtn">Check Score</button>
+        <button id="checkRiskBtn">Check Risk</button>
+        <button id="checkMeanMedianBtn">Check MeanMedian</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const statusElement = document.getElementById("status");
+            const checkStatusBtn = document.getElementById("checkStatusBtn");
+            const checkMaxminBtn = document.getElementById("checkMaxminBtn");
+            const checkSortBtn = document.getElementById("checkSortBtn");
+            const checkTotalBtn = document.getElementById("checkTotalBtn");
+            const checkScoreBtn = document.getElementById("checkScoreBtn");
+            const checkRiskBtn = document.getElementById("checkRiskBtn");
+            const checkMeanMedianBtn = document.getElementById("checkMeanMedianBtn");
+
+            // Function to update the status on the page
+            function updateStatus(serviceStatuses) {
+                statusElement.innerHTML = ''; // Clear current status
+                serviceStatuses.forEach(service => {
+                    statusElement.innerHTML += `${service.name}: ${service.isUp ? 'UP' : 'DOWN'} - Response time: ${service.responseTime}ms<br>`;
+                });
+            }
+
+            // Function to check all services status
+            function checkAllServicesStatus() {
+                fetch('http://qubengage-monitor.40381868.qpc.hal.davecutting.uk/check-status/all')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Add service names for each status
+                        const servicesWithNames = data.map((status, index) => ({ name: services[index], ...status }));
+                        updateStatus(servicesWithNames);
+                    })
+                    .catch(error => {
+                        statusElement.textContent = `Error fetching data: ${error}`;
+                    });
+            }
+
+            // Function to check a specific service status
+            function checkServiceStatus(serviceName) {
+                fetch(`http://qubengage-monitor.40381868.qpc.hal.davecutting.uk/check-status/${serviceName}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        updateStatus([{ name: serviceName, ...data }]);
+                    })
+                    .catch(error => {
+                        statusElement.textContent = `Error fetching data for ${serviceName}: ${error}`;
+                    });
+            }
+
+            // Event listeners for the buttons
+            checkStatusBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking all services status...";
+                checkAllServicesStatus();
+            });
+
+            checkMaxminBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking Maxmin service status...";
+                checkServiceStatus('Maxmin');
+            });
+
+            checkSortBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking Sort service status...";
+                checkServiceStatus('Sort');
+            });
+
+            checkTotalBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking Total service status...";
+                checkServiceStatus('Total');
+            });
+
+            checkScoreBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking Score service status...";
+                checkServiceStatus('Score');
+            });
+
+            checkRiskBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking Risk service status...";
+                checkServiceStatus('Risk');
+            });
+
+            checkMeanMedianBtn.addEventListener("click", () => {
+                statusElement.textContent = "Checking MeanMedian service status...";
+                checkServiceStatus('MeanMedian');
+            });
+
+            // Define a list of services
+            const services = ['Maxmin', 'Sort', 'Total', 'Score', 'Risk', 'MeanMedian'];
+
+            // Call to check all services status on page load
+            checkAllServicesStatus();
+        });
+    </script>
+</body>
+</html>

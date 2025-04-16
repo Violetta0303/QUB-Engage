@@ -1,0 +1,9 @@
+image: maven:3.8.4-openjdk-17
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - mvn clean -DskipTests=true

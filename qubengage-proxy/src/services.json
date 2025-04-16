@@ -1,0 +1,8 @@
+{
+    "maxmin": "http://qubengage-maxmin.40381868.qpc.hal.davecutting.uk/",
+    "sorted": "http://qubengage-sort.40381868.qpc.hal.davecutting.uk/",
+    "total": "http://qubengage-total.40381868.qpc.hal.davecutting.uk/",
+    "score": "http://qubengage-score.40381868.qpc.hal.davecutting.uk/",
+    "risk": "http://qubengage-risk.40381868.qpc.hal.davecutting.uk/",
+    "meanmedian": "https://europe-west2-cloud-405120.cloudfunctions.net/qubengage-meanmedian/"
+}

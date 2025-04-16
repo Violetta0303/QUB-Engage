@@ -1,0 +1,14 @@
+image: node:20
+
+stages:
+  - test
+
+variables:
+  NODE_ENV: test
+
+test:
+  stage: test
+  script:
+    - npm install -g jest
+    - npm install supertest --save-dev
+    - jest

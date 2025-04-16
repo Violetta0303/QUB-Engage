@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>StudentEngagementMonitoring</title>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="alternate.js"></script>
+<script type="text/javascript" src="serviceFailureHandler.js"></script>
+
+<script type="text/javascript">
+
+// let maxminURL = config.maxminURL;
+// let sortedURL = config.sortedURL;
+// let totalURL = config.totalURL;
+// let scoreURL = config.scoreURL;
+// let riskURL = config.riskURL;
+// let meanmedianURL = config.meanmedianURL;
+
+function displayError(errorMessage) {
+    document.getElementById('output-text').textContent = 'Error: ' + errorMessage;
+}
+
+// function makeGETRequest(url, successCallback, errorCallback) {
+//     let xhttp = new XMLHttpRequest();
+//     xhttp.onreadystatechange = function () {
+//         if (this.readyState === 4) {
+//             if (this.status === 200) {
+//                 try {
+//                     const response = JSON.parse(this.responseText);
+//                     successCallback(response);
+//                 } catch (e) {
+//                     console.error('Parsing error:', e);
+//                     errorCallback('Failed to parse the server response.');
+//                 }
+//             } else {
+//                 try {
+//                     // Attempt to parse the error response from the server
+//                     const errorResponse = JSON.parse(this.responseText);
+//                     errorCallback(errorResponse.message || 'An error occurred');
+//                 } catch (e) {
+//                     console.error('Parsing error:', e);
+//                     errorCallback('Failed to retrieve data. Server responded with status: ' + this.status);
+//                 }
+//             }
+//         }
+//     };
+//     xhttp.onerror = function () {
+//         errorCallback('Network Error: Could not connect to the server.');
+//     };
+//     xhttp.open('GET', url, true);
+//     xhttp.send();
+// }
+
+function displayMaxMin(response) {
+    if (response.error) {
+        // Assuming that the error message is in the 'message' key of the response.
+        displayError(response.message);
+    } else {
+        // Ensure that max_item and min_item exist before trying to access their properties.
+        const maxItem = response.max_item;
+        const minItem = response.min_item;
+        if (maxItem && minItem) {
+            document.getElementById('output-text').textContent = 'Maximum attendance = ' +
+                maxItem.name + ' - ' + maxItem.attendance + ' hours\n' +
+                'Minimum attendance = ' + minItem.name + ' - ' + minItem.attendance + ' hours';
+        } else {
+            // If max_item or min_item do not exist, display a default error message.
+            displayError('The response from the server is incomplete.');
+        }
+    }
+}
+
+function displaySortedAttendance(response) {
+    if (response.error) {
+        displayError(response.message);
+    } else {
+        // Check if the sorted_attendance is an array and has elements before trying to access it
+        if (Array.isArray(response.sorted_attendance) && response.sorted_attendance.length > 0) {
+            const sortedAttendanceStr = response.sorted_attendance
+                .map(att => `${att.item} - ${att.attendance} hours`)
+                .join('\n');
+            document.getElementById('output-text').textContent = sortedAttendanceStr;
+        } else {
+            // If sorted_attendance is missing or not an array, display a default error message
+            displayError('Sorted attendance data is not available.');
+        }
+    }
+}
+
+function displayTotal(response) {
+    if (response.error) {
+        displayError(response.message);
+    } else {
+        const totalAttendance = response.total_attendance;
+        if (totalAttendance !== undefined) {
+            document.getElementById('output-text').textContent = 'Total Attendance (in hours) = ' + totalAttendance + ' hours';
+        } else {
+            displayError('The total attendance data is incomplete or not available.');
+        }
+    }
+}
+
+function displayEngagementScore(response) {
+    if (response.error) {
+        displayError(response.message);
+    } else {
+        // Make sure to match the data field as per your ApiResponse.java class
+        const engagementScore = response.data; // Assuming the score is in the data field
+        if (typeof engagementScore !== 'undefined') {
+            document.getElementById('output-text').textContent = 'Engagement Score = ' + engagementScore + '%';
+        } else {
+            displayError('Engagement score data is not available.');
+        }
+    }
+}
+
+function displayRisk(response) {
+    if (response.error) {
+        displayError(response.message);
+    } else {
+        const risk = response.risk;
+        if (typeof risk !== 'undefined') {
+            document.getElementById('output-text').textContent = 'Risk of Student Failure = ' + (risk ? 'High' : 'Low');
+        } else {
+            displayError('Risk data is not available.');
+        }
+    }
+}
+
+function displayMeanMedian(response) {
+    if (response.error) {
+        // Assuming that the error message is in the 'message' key of the response.
+        displayError(response.message);
+    } else {
+        // Ensure that mean_item and median_item exist and are numbers
+        const meanItem = response.mean_item;
+        const medianItem = response.median_item;
+        
+        if (typeof meanItem === 'number' && typeof medianItem === 'number') {
+            document.getElementById('output-text').textContent = 'Mean attendance = ' +
+                meanItem + ' hours\n' +
+                'Median attendance = ' + medianItem + ' hours';
+        } else {
+            // If mean_item or median_item are missing or not numbers, display an error message.
+            displayError('The response from the server is incomplete or contains invalid data.');
+        }
+    }
+}
+
+function clearText()
+{
+    document.getElementById('attendance_1').value = '';
+    document.getElementById('attendance_2').value = '';
+    document.getElementById('attendance_3').value = '';
+    document.getElementById('attendance_4').value = '';
+    document.getElementById('output-text').value = '';
+}
+
+// function getMaxMin() {
+//     // Collect values from the input fields
+//     let item_1 = document.getElementById('item_1').value;
+//     let item_2 = document.getElementById('item_2').value;
+//     let item_3 = document.getElementById('item_3').value;
+//     let item_4 = document.getElementById('item_4').value;
+//     let attendance_1 = document.getElementById('attendance_1').value;
+//     let attendance_2 = document.getElementById('attendance_2').value;
+//     let attendance_3 = document.getElementById('attendance_3').value;
+//     let attendance_4 = document.getElementById('attendance_4').value;
+
+//     // Construct the URL with query parameters
+//     let url = maxminURL + '&item_1=' + encodeURIComponent(item_1) +
+//         '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&item_2=' + encodeURIComponent(item_2) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&item_3=' + encodeURIComponent(item_3) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&item_4=' + encodeURIComponent(item_4) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4);
+
+//     // Make the GET request
+//     makeGETRequest(url, displayMaxMin, displayError);
+// }
+
+// function getSortedAttendance() {
+//     // Collect values from the input fields
+//     let item_1 = document.getElementById('item_1').value.trim();
+//     let item_2 = document.getElementById('item_2').value.trim();
+//     let item_3 = document.getElementById('item_3').value.trim();
+//     let item_4 = document.getElementById('item_4').value.trim();
+//     let attendance_1 = document.getElementById('attendance_1').value.trim();
+//     let attendance_2 = document.getElementById('attendance_2').value.trim();
+//     let attendance_3 = document.getElementById('attendance_3').value.trim();
+//     let attendance_4 = document.getElementById('attendance_4').value.trim();
+
+//     // Construct the URL with query parameters
+//     let url = sortedURL + '&item_1=' + encodeURIComponent(item_1) +
+//         '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&item_2=' + encodeURIComponent(item_2) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&item_3=' + encodeURIComponent(item_3) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&item_4=' + encodeURIComponent(item_4) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4);
+
+//     // Make the GET request
+//     makeGETRequest(url, displaySortedAttendance, displayError);
+// }
+
+// function getTotal() {
+//     // Collect values from the input fields
+//     let attendance_1 = document.getElementById('attendance_1').value;
+//     let attendance_2 = document.getElementById('attendance_2').value;
+//     let attendance_3 = document.getElementById('attendance_3').value;
+//     let attendance_4 = document.getElementById('attendance_4').value;
+
+//     // Construct the URL with query parameters
+//     let url = totalURL + '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4);
+
+//     // Make the GET request
+//     makeGETRequest(url, displayTotal, displayError);
+// }
+
+// function getEngagementScore() {
+//     // Collect values from the input fields
+//     let attendance_1 = document.getElementById('attendance_1').value;
+//     let attendance_2 = document.getElementById('attendance_2').value;
+//     let attendance_3 = document.getElementById('attendance_3').value;
+//     let attendance_4 = document.getElementById('attendance_4').value;
+
+//     // Construct the URL with query parameters
+//     let url = scoreURL + '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4);
+
+//     // Make the GET request
+//     makeGETRequest(url, displayEngagementScore, displayError);
+// }
+
+// function getRisk() {
+//     // Collect values from the input fields
+//     let attendance_1 = document.getElementById('attendance_1').value;
+//     let attendance_2 = document.getElementById('attendance_2').value;
+//     let attendance_3 = document.getElementById('attendance_3').value;
+//     let attendance_4 = document.getElementById('attendance_4').value;
+//     let cutoff = document.getElementById('cutoff').value;
+
+//     // Construct the URL with query parameters
+//     let url = riskURL + '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4) +
+//         '&cutoff=' + encodeURIComponent(cutoff);
+
+//     // Make the GET request
+//     makeGETRequest(url, displayRisk, displayError);
+// }
+
+// function getMeanMedian() {
+//     // Collect values from the input fields
+//     let item_1 = document.getElementById('item_1').value;
+//     let item_2 = document.getElementById('item_2').value;
+//     let item_3 = document.getElementById('item_3').value;
+//     let item_4 = document.getElementById('item_4').value;
+//     let attendance_1 = document.getElementById('attendance_1').value;
+//     let attendance_2 = document.getElementById('attendance_2').value;
+//     let attendance_3 = document.getElementById('attendance_3').value;
+//     let attendance_4 = document.getElementById('attendance_4').value;
+
+//     // Construct the URL with query parameters
+//     let url = meanmedianURL + '&item_1=' + encodeURIComponent(item_1) +
+//         '&attendance_1=' + encodeURIComponent(attendance_1) +
+//         '&item_2=' + encodeURIComponent(item_2) +
+//         '&attendance_2=' + encodeURIComponent(attendance_2) +
+//         '&item_3=' + encodeURIComponent(item_3) +
+//         '&attendance_3=' + encodeURIComponent(attendance_3) +
+//         '&item_4=' + encodeURIComponent(item_4) +
+//         '&attendance_4=' + encodeURIComponent(attendance_4);
+
+//     // Make the GET request
+//     makeGETRequest(url, displayMeanMedian, displayError);
+// }
+
+function getMaxMin() {
+    // Collect values from the input fields
+    const queryParams = new URLSearchParams({
+        item_1: document.getElementById('item_1').value,
+        attendance_1: document.getElementById('attendance_1').value,
+        item_2: document.getElementById('item_2').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        item_3: document.getElementById('item_3').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        item_4: document.getElementById('item_4').value,
+        attendance_4: document.getElementById('attendance_4').value
+        }).toString();
+
+        // Make the GET request with service failover handling
+        makeGETRequestWithLoadBalancingAndFailover('maxmin', queryParams, displayMaxMin, displayError);
+} 
+
+function getSortedAttendance() {
+    // Collect values from the input fields
+    const queryParams = new URLSearchParams({
+        item_1: document.getElementById('item_1').value.trim(),
+        attendance_1: document.getElementById('attendance_1').value.trim(),
+        item_2: document.getElementById('item_2').value.trim(),
+        attendance_2: document.getElementById('attendance_2').value.trim(),
+        item_3: document.getElementById('item_3').value.trim(),
+        attendance_3: document.getElementById('attendance_3').value.trim(),
+        item_4: document.getElementById('item_4').value.trim(),
+        attendance_4: document.getElementById('attendance_4').value.trim()
+    }).toString();
+
+    // Make the GET request with service failover handling
+    makeGETRequestWithLoadBalancingAndFailover('sorted', queryParams, displaySortedAttendance, displayError);
+}
+
+function getTotal() {
+    const queryParams = new URLSearchParams({
+        attendance_1: document.getElementById('attendance_1').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        attendance_4: document.getElementById('attendance_4').value
+    }).toString();
+
+    makeGETRequestWithLoadBalancingAndFailover('total', queryParams, displayTotal, displayError);
+}
+
+function getEngagementScore() {
+    const queryParams = new URLSearchParams({
+        attendance_1: document.getElementById('attendance_1').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        attendance_4: document.getElementById('attendance_4').value
+    }).toString();
+
+    makeGETRequestWithLoadBalancingAndFailover('score', queryParams, displayEngagementScore, displayError);
+}
+
+function getRisk() {
+    const queryParams = new URLSearchParams({
+        attendance_1: document.getElementById('attendance_1').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        attendance_4: document.getElementById('attendance_4').value,
+        cutoff: document.getElementById('cutoff').value
+    }).toString();
+
+    makeGETRequestWithLoadBalancingAndFailover('risk', queryParams, displayRisk, displayError);
+}
+
+function getMeanMedian() {
+    const queryParams = new URLSearchParams({
+        item_1: document.getElementById('item_1').value,
+        attendance_1: document.getElementById('attendance_1').value,
+        item_2: document.getElementById('item_2').value,
+        attendance_2: document.getElementById('attendance_2').value,
+        item_3: document.getElementById('item_3').value,
+        attendance_3: document.getElementById('attendance_3').value,
+        item_4: document.getElementById('item_4').value,
+        attendance_4: document.getElementById('attendance_4').value
+    }).toString();
+
+    makeGETRequestWithLoadBalancingAndFailover('meanmedian', queryParams, displayMeanMedian, displayError);
+}
+
+
+const BASE_URL = "https://europe-west2-cloud-405120.cloudfunctions.net/qubengage-savings/"
+
+// Save
+
+// Add Student Information
+function addStudent() {
+    const studentID = document.getElementById('student_id').value;
+    const firstName = document.getElementById('first_name').value;
+    const lastName = document.getElementById('last_name').value;
+
+    const studentData = { StudentID: studentID, FirstName: firstName, LastName: lastName };
+    makePostRequest("student", studentData);
+}
+
+// Add Student Engagement
+function saveEngagement() {
+    const studentID = document.getElementById('student_id').value;
+    const lectureHours = document.getElementById('attendance_1').value;
+    const labHours = document.getElementById('attendance_2').value;
+    const supportHours = document.getElementById('attendance_3').value;
+    const canvasActivitiesHours = document.getElementById('attendance_4').value;
+    const cutoffScore = document.getElementById('cutoff').value;
+
+    const engagementData = {
+        StudentID: studentID,
+        LectureHours: lectureHours,
+        LabHours: labHours,
+        SupportHours: supportHours,
+        CanvasActivitiesHours: canvasActivitiesHours,
+        CutoffScore: cutoffScore
+    };
+    makePostRequest("save", engagementData);
+}
+
+// Load
+
+// Load All Student Engagement Data
+function loadEngagements() {
+    const url = BASE_URL + "load";
+    const xhttp = new XMLHttpRequest();
+    xhttp.open("GET", url, true);
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4 && this.status === 200) {
+            const engagements = JSON.parse(this.responseText);
+            displayEngagements(engagements);
+        }
+    };
+    xhttp.send();
+}
+
+// Load Specific Engagement Data
+function loadSpecificEngagement() {
+    const studentID = document.getElementById('specific_student_id').value;
+    const url = BASE_URL + "load/" + studentID;
+    
+    const xhttp = new XMLHttpRequest();
+    xhttp.open("GET", url, true);
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4) {
+            if (this.status === 200) {
+                const engagement = JSON.parse(this.responseText);
+                displaySpecificEngagement(engagement);
+            } else if (this.status === 404) {
+                displayError("Student engagement not found");
+            } else {
+                displayError("Failed to load specific engagement");
+            }
+        }
+    };
+    xhttp.send();
+}
+
+// Generic POST Request Functions
+function makePostRequest(relativePath, data) {
+    const url = BASE_URL + relativePath;
+    const xhttp = new XMLHttpRequest();
+    xhttp.open("POST", url, true);
+    xhttp.setRequestHeader("Content-Type", "application/json");
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4 && this.status === 200 || this.status === 201 || this.status === 204) {
+            displaySuccess("Operation successful");
+        } else if (this.readyState === 4) {
+            displayError("Operation failed");
+        }
+    };
+    xhttp.send(JSON.stringify(data));
+}
+
+// Show success message
+function displaySuccess(message) {
+    document.getElementById('output-text').textContent = message;
+}
+
+// Function to display all engagements
+function displayEngagements(engagements) {
+    const outputDiv = document.getElementById('output-div');
+    
+    if (engagements.length === 0) {
+        outputDiv.textContent = 'No engagements found.';
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.border = '1';
+
+    // Create table body
+    const tbody = document.createElement('tbody');
+
+    // Create table header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    const headers = [
+        'EngagementID',
+        'StudentID',
+        'LectureHours',
+        'LabHours',
+        'SupportHours',
+        'CanvasActivitiesHours',
+        'CutoffScore',
+        'DateLogged'
+    ];
+
+    headers.forEach(headerText => {
+        const headerCell = document.createElement('th');
+        headerCell.textContent = headerText;
+        headerRow.appendChild(headerCell);
+    });
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    engagements.forEach(engagement => {
+        const row = document.createElement('tr');
+        const rowData = [
+            engagement.EngagementID,
+            engagement.StudentID,
+            engagement.LectureHours,
+            engagement.LabHours,
+            engagement.SupportHours,
+            engagement.CanvasActivitiesHours,
+            engagement.CutoffScore,
+            engagement.DateLogged
+        ];
+
+        rowData.forEach(cellData => {
+            const cell = document.createElement('td');
+            cell.textContent = cellData;
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    outputDiv.innerHTML = ''; // Clear previous content
+    outputDiv.appendChild(table);
+}
+
+// Function to display specific engagement
+function displaySpecificEngagement(engagement) {
+    const outputDiv = document.getElementById('output-div');
+    outputDiv.innerHTML = ''; // Clear previous content
+
+    if (!engagement || (Array.isArray(engagement) && engagement.length === 0)) {
+        outputDiv.textContent = 'No engagement data available';
+        return;
+    }
+
+    // Assuming engagement could be an object or an array of objects
+    const engagements = Array.isArray(engagement) ? engagement : [engagement];
+
+    const table = document.createElement('table');
+    table.border = '1';
+
+    // Create table body
+    const tbody = document.createElement('tbody');
+
+    // Create a row for the headers
+    const headerRow = document.createElement('tr');
+    const headers = [
+        'EngagementID',
+        'StudentID',
+        'LectureHours',
+        'LabHours',
+        'SupportHours',
+        'CanvasActivitiesHours',
+        'CutoffScore',
+        'DateLogged'
+    ];
+
+    headers.forEach(headerText => {
+        const headerCell = document.createElement('th');
+        headerCell.textContent = headerText;
+        headerRow.appendChild(headerCell);
+    });
+
+    tbody.appendChild(headerRow);
+
+    // Create rows for the data
+    engagements.forEach(eng => {
+        const dataRow = document.createElement('tr');
+        headers.forEach(header => {
+            const dataCell = document.createElement('td');
+            dataCell.textContent = eng[header] || 'N/A'; // Use 'N/A' for undefined properties
+            dataRow.appendChild(dataCell);
+        });
+        tbody.appendChild(dataRow);
+    });
+
+    table.appendChild(tbody);
+    outputDiv.appendChild(table);
+}
+
+</script>
+
+<style type="text/css">
+body  {
+    font-size: 150%;
+    font-family: monospace;
+}
+label {
+    display: inline-block;
+    width: 150px;
+    text-align: left;
+}
+#logo
+{
+    font-family: Calibri, sans-serif;
+    font-weight: lighter;
+    color: #505050;
+    margin: 0.5em;
+}
+
+#sem
+{
+    text-align: center;
+    margin-top: 1em;
+}
+#input-div-1
+{
+    text-align: center;
+    margin-top: 1em;
+    background-color:#d5d8dc  ;
+}
+#input-div-2
+{
+    text-align: center;
+    background-color:#abb2b9 ;
+}
+#output-div
+{
+    text-align: center;
+    background-color:#808b96 ;
+}
+.display-item {
+    font-size: 90%;
+    color: black;
+    font-family: monospace;
+    background-color: white;
+    padding: 0.2em;
+    margin: 0.2em;
+    letter-spacing: 0.1em;
+    width: 380px;
+    text-align: right;
+}
+
+.display-attendance{
+    font-size: 90%;
+    color: black;
+    background-color: white;
+    padding: 0.2em;
+    margin: 0.2em;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    width: 40px;
+}
+
+.display-output {
+    font-size: 90%;
+    color: black;
+    background-color:white ;
+    padding: 0.2em;
+    margin: 0.2em;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    width: 600px;
+
+}
+
+.sembutton-active {
+    background-color:   #2874a6  ;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 50px;
+    width: 400px;
+}
+
+.sembutton-inactive {
+    background-color: gray;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 50px;
+    width: 400px;
+}
+
+.sembutton-clear {
+    background-color:  #c0392b ;
+    color: white;
+    padding: 0px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 4px 2px;
+    cursor: pointer;
+    height: 40px;
+    width: 400px;
+}
+
+</style>
+
+</head>
+<body>
+<div id="sem">
+    <div id="logo">
+        Student Engagement Monitoring
+    </div>
+    <div id="input-div-1">
+    <div>
+        <input class="display-item" type="text" id="item_1" name="item_1" value="Lecture sessions">
+        <input class="display-attendance"  type="text" id="attendance_1" name="attendance_1" placeholder="00"><label>/33 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_2" name="item_2" value="Lab sessions">
+        <input class="display-attendance"  type="text" id="attendance_2" name="attendance_2" placeholder="00"><label>/22 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_3" name="item_3" value="Support sessions">
+        <input class="display-attendance"  type="text" id="attendance_3" name="attendance_3" placeholder="00"><label>/44 (hours)</label>
+    </div>
+    <div>
+        <input class="display-item" type="text" id="item_4" name="item_4" value="Canvas activities">
+        <input class="display-attendance"  type="text" id="attendance_4" name="attendance_4" placeholder="00"><label>/55 (hours)</label>
+    </div>
+    </div>
+    <div id="input-div-2">
+        <label class="display-item" id="cut-off">Cut-off Engaggement Score</label>
+        <input class="display-attendance"  type="text" id="cutoff" name="cutoff" placeholder="00"><label>/100 (%)</label>
+    </div>
+    <div id="output-div">
+        <textarea class="display-output" id="output-text" rows="5" cols="35" readonly=1 placeholder="Results here..." value="">
+        </textarea>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getMaxMin();">Maximum and Minimum Attendance</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getSortedAttendance();">Sort Attendance</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getTotal();">Total Attendance Hours</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getEngagementScore();">Student Engagement Score</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getRisk();">Risk of Student Failure</button>
+    </div>
+    <div>
+        <button class="sembutton-active" onclick="getMeanMedian();">Mean and Median Attendance</button>
+    </div>
+    <div>
+        <button class="sembutton-clear" onclick="clearText();">Clear</button>
+    </div>
+
+    
+    <div id="input-div-student">
+        <input type="text" id="student_id" placeholder="Student ID">
+        <input type="text" id="first_name" placeholder="First Name">
+        <input type="text" id="last_name" placeholder="Last Name">
+        <button onclick="addStudent();">Add Student</button>
+    </div>
+
+    <div id="input-div-engagement">
+        <button onclick="saveEngagement();">Save Engagement</button>
+    </div>
+
+    <div id="input-div-load">
+        <button onclick="loadEngagements();">Load All Engagements</button>
+        <input type="text" id="specific_student_id" placeholder="Specific Student ID">
+        <button onclick="loadSpecificEngagement();">Load Specific Engagement</button>
+    </div>
+
+    <div id="output-div">
+        <textarea id="output-text" rows="5" cols="35" readonly></textarea>
+    </div>
+    
+
+    <div id="monitor">
+        <iframe src="monitor.html" frameborder="0" width="800" height="600"></iframe>
+    </div>
+
+</div>
+</body>
+
+<script type="text/javascript">
+</script>
+
+</html>

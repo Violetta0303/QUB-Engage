@@ -1,0 +1,5 @@
+image: php:7.2
+
+test:proxy:
+  script:
+    - php src/test.php
